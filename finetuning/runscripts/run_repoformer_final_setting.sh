@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-export HOME_DIR=`realpath ../../`
-
+export CUDA_HOME=/usr/local/cuda
 export PYTHONPATH=${PYTHONPATH}:${HOME_DIR}/finetuning/
 
+export HOME_DIR=`realpath ../../`
 
 LR=2e-5
 GRAD_STEPS=4
@@ -17,19 +17,13 @@ GPU_COUNT=8
 NODE_COUNT=1
 NUM_WORKERS=96
 
-# TEMP=0.05
-# MARGIN=0.5
-
 LAMBDA_CFC=1.0
-# FUNCRATIO=0.5
 
 DATA_DIR="your_data_path"
 TRAIN_DIR="${DATA_DIR}/20230908_diverse_chunk240k_func120k_starcoder1b_maxlen2048_lrratio2.0_cfcinrc/train"
 VALID_DIR="${DATA_DIR}/20230908_diverse_chunk240k_func120k_starcoder1b_maxlen2048_lrratio2.0_cfcinrc/valid"
 EXP_PREFIX="repoformer_1b_final_cfcinrc_lambdacfc${LAMBDA_CFC}"
 
-
-export CUDA_HOME=/usr/local/cuda
 
 CUDA_VISIBLE_DEVICES=$GPUS python pl_trainer.py \
    --num_workers $NUM_WORKERS \

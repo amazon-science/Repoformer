@@ -10,7 +10,7 @@ def add_program_args():
         default="BigQuery")
     parser.add_argument("--train_datadir", type=str, help="path to the processed [PyPI + BigQuery] or [Wikitext_103] .arrow dataset")
     parser.add_argument("--valid_datadir", type=str, help="path to the processed [PyPI + BigQuery] or [Wikitext_103] .arrow dataset")
-    parser.add_argument("--log_dir", type=str, default="../contraclm_results/", help="Path of the Tensorboard log directory")
+    parser.add_argument("--log_dir", type=str, default="../results/", help="Path of the Tensorboard log directory")
     parser.add_argument("--num_workers", type=int, default=8, help="Number of data loading workers")
     parser.add_argument("--seed", type=int, default=42, help="value to seed RNG of torch, numpy")
     parser.add_argument("--track_steps", action="store_true", help="if True, progress bar will track training batches, else will track epochs")
@@ -53,9 +53,8 @@ def add_model_args(parent_parser):
     # dataloading
     parser.add_argument("--train_batch_size", type=int, default=64, help="Batch size for training combined across all devices.")
     parser.add_argument("--valid_batch_size", type=int, default=64, help="Batch size for validation combined across all devices.")
-    # contrastive learning
-    parser.add_argument("--loss", type=str, help="Loss function name", default="MLE_Only", choices=["MLE_Only", "ContraCLM", "ContraCLMTok", "ContraCLMSeq", "Repoformer"])
-    parser.add_argument("--temperature", type=float, default=0.05, help="temperature for ContraCLM losses")
+    # objective
+    parser.add_argument("--loss", type=str, help="Loss function name", default="MLE_Only", choices=["MLE_Only",  "Repoformer"])
     # args for repoformer    
     parser.add_argument("--full_sequence_code_completion_loss", action='store_true')
     parser.add_argument("--separate_cfc_token_loss", action='store_true')
@@ -74,9 +73,6 @@ def check_args(args):
         assert torch.cuda.is_available() and args.devices <= torch.cuda.device_count(), "Asking for more GPUs than available"
     elif args.accelerator == "cpu":
         assert args.devices <= os.cpu_count(), "Asking for more CPUs than available"
-    # sanity check on the required parameters for losses
-    if args.loss == "MLE_Only" or args.loss == "Repoformer":
-        assert args.temperature is None and args.negative_sampling is None
     # repoformer sanity checks
     if args.cfc_in_rc:
         assert not args.replace_cfc_end_with_fim_middle

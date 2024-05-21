@@ -84,7 +84,6 @@ def model_inference(args):
                 logits.append(logprobs[tok_id])
             retrieval_prob = torch.softmax(torch.tensor(logits), dim=-1)[49152].item()
             do_retrieval = retrieval_prob > args.retrieval_threshold
-            # print(retrieval_prob, do_retrieval, flush=True)
             if do_retrieval:
                 cur_pred = llm.generate(entry['llm_prompt_lrcontext'], sampling_params, use_tqdm=False)
             else:

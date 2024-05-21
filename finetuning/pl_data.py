@@ -11,17 +11,17 @@ logger.setLevel(logging.INFO)
 from dataloader.bigquery_pypi import LLMDataset
 
 
-class LitContraCLMDataModule(pl.LightningDataModule):
+class RepoformerDataModule(pl.LightningDataModule):
     def __init__(self, data_prefix, train_datadir, valid_datadir, train_batch_size, 
                  valid_batch_size, num_workers=0):
-        super(LitContraCLMDataModule, self).__init__()
+        super(RepoformerDataModule, self).__init__()
         self.data_prefix = data_prefix
         self.train_datadir = train_datadir
         self.valid_datadir = valid_datadir
         self.train_batch_size = train_batch_size
         self.valid_batch_size = valid_batch_size
         self.num_workers = num_workers
-        logger.info(f"Initializing ContraCLM DataModule w/ train_bs={self.train_batch_size}, "
+        logger.info(f"Initializing RepoformerDataModule w/ train_bs={self.train_batch_size}, "
                     f"valid_bs={self.valid_batch_size}")
 
     def setup(self, stage=None):

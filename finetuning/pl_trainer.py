@@ -20,9 +20,9 @@ from pytorch_lightning.strategies import DeepSpeedStrategy
 from pytorch_lightning.strategies.ddp import DDPStrategy
 
 from pl_args import add_model_args, add_pl_args, add_program_args
-from pl_data import LitContraCLMDataModule
-from pl_model import LitContraCLM
-from utils import (CheckpointEveryNSteps, GPUtilCallback, get_loss_func,
+from pl_data import RepoformerDataModule
+from pl_model import RepoformerLM
+from utils import (CheckpointEveryNSteps, GPUtilCallback,
                    setup_log_path)
 
 
@@ -46,7 +46,7 @@ def main():
     args.val_check_interval *= args.accumulate_grad_batches
 
     # Load Data
-    data = LitContraCLMDataModule(
+    data = RepoformerDataModule(
         args.expt_prefix,
         args.train_datadir, 
         args.valid_datadir, 
@@ -90,14 +90,9 @@ def main():
     }
     trainer = pl.Trainer.from_argparse_args(args, **custom_trainer_kwargs)
     logger.warning(f'{trainer.__dict__=}')
-    # Initialize the Contrastive Learning Objectives
-    loss_func_tok, loss_func_seq = get_loss_func(args, args.pad_token_id)
-
+    
     # PL model
-    pl_model = LitContraCLM(args,
-                            loss_func_tok=loss_func_tok,
-                            loss_func_seq=loss_func_seq,
-                            num_nodes=num_nodes)
+    pl_model = RepoformerLM(args, loss_func_tok=None, loss_func_seq=None, num_nodes=num_nodes)
 
     # training
     trainer.fit(pl_model, data)
