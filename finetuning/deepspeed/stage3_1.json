@@ -1,0 +1,15 @@
+{
+    "prescale_gradients": false,
+    "activation_checkpointing": {
+        "partition_activations": true,
+        "contiguous_memory_optimization": true,
+        "cpu_checkpointing": true,
+        "number_checkpoints": 1
+    },
+    "zero_optimization": {
+        "stage": 3
+    },
+    "zero_allow_untested_optimizer": true,
+    "allgather_bucket_size": 5e8,
+    "reduce_bucket_size": 5e8
+}

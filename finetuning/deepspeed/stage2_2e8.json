@@ -1,0 +1,11 @@
+{
+    "prescale_gradients": false,
+    "zero_optimization": {
+        "stage": 2,
+        "contiguous_gradients": false
+    },
+    "zero_allow_untested_optimizer": true,
+    "allgather_bucket_size": 2e8,
+    "reduce_bucket_size": 2e8
+}
+
