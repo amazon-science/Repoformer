@@ -11,8 +11,6 @@ from pytorch_lightning.utilities.rank_zero import rank_zero_only
 from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
                           GPT2LMHeadModel)
 
-from contrastive_losses import ContraCLMSeqLoss, ContraCLMTokLoss
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -38,7 +36,7 @@ def setup_log_path(args, num_nodes=1):
         respath += f"_dropout_rate_{args.dropout_p}"
     respath += f"_warmup{args.warmup_steps}"
     respath += f"_wd{int(args.weight_decay * 100)}"
-    respath += f"_temp{int(args.temperature*100)}"
+    # respath += f"_temp{int(args.temperature*100)}"
     return respath
 
 
@@ -249,39 +247,6 @@ def get_inputs_and_labels(token_ids, pad_token_id=None, mask_pad=False, fim_midd
             # mask labels
             lbl_tensor[mask == 0] = -100
 
-        # debugging
-        '''
-        lbl_tensor_temp = token_ids[:, 1:].clone()
-        lbl_tensor_temp[lbl_tensor_temp[:, :] == pad_token_id] = -100
-        labels_list = lbl_tensor_temp.squeeze().tolist()
-        mask_list = mask.squeeze().tolist()
-        cfc_info_start_idx = None 
-        cfc_info_end_idx = None
-        code_completion_lbl_tensor_final = lbl_tensor.squeeze().tolist()
-
-        if 49152 in labels_list:
-            cfc_info_start_idx = labels_list.index(49152)
-            cfc_info_end_idx = labels_list.index(49153)
-            labels_list[cfc_info_start_idx] = [[labels_list[cfc_info_start_idx]]]
-            labels_list[cfc_info_end_idx] = [[labels_list[cfc_info_end_idx]]]
-            mask_list[cfc_info_start_idx] = [[mask_list[cfc_info_start_idx]]]
-            mask_list[cfc_info_end_idx] = [[mask_list[cfc_info_end_idx]]]
-            code_completion_lbl_tensor_final[cfc_info_start_idx] = [[code_completion_lbl_tensor_final[cfc_info_start_idx]]]
-            code_completion_lbl_tensor_final[cfc_info_end_idx] = [[code_completion_lbl_tensor_final[cfc_info_end_idx]]]
-        print(labels_list)
-        print('=======================')
-        print(mask_list)
-        print('=======================')
-        print(code_completion_lbl_tensor_final)
-        print('=======================')
-        print()
-        print('<fim_middle> at {}'.format(labels_list.index(2)))
-        print('<cfc_info> at {}'.format(cfc_info_start_idx))
-        print('</cfc_info> at {}'.format(cfc_info_end_idx))
-        print('\n\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n', flush=True)
-        # exit()
-        '''
-
         attention_mask = torch.ones_like(inp_tensor)
         attention_mask = attention_mask.masked_fill(inp_tensor.eq(pad_token_id), 0.0).type(torch.bool)
 
@@ -435,47 +400,6 @@ def get_inputs_and_labels_separate_cfc_label(token_ids, pad_token_id=None, mask_
 
             # mask labels
             cfc_lbl_tensor[mask_cfc == 0] = -100
-            
-        '''
-        # debugging
-        cfc_lbl_tensor_temp = token_ids[:, 1:].clone()
-        cfc_lbl_tensor_temp[cfc_lbl_tensor_temp[:, :] == pad_token_id] = -100
-        labels_list = cfc_lbl_tensor_temp.squeeze().tolist()
-        mask_list = mask.squeeze().tolist()
-        mask_cfc_list = mask_cfc.squeeze().tolist()
-        cfc_info_start_idx = None 
-        cfc_info_end_idx = None
-        code_completion_lbl_tensor_final = code_completion_lbl_tensor.squeeze().tolist()
-        cfc_lbl_tensor_final = cfc_lbl_tensor.squeeze().tolist()
-
-        if 49152 in labels_list:
-            cfc_info_start_idx = labels_list.index(49152)
-            cfc_info_end_idx = labels_list.index(49153)
-            labels_list[cfc_info_start_idx] = [[labels_list[cfc_info_start_idx]]]
-            labels_list[cfc_info_end_idx] = [[labels_list[cfc_info_end_idx]]]
-            mask_list[cfc_info_start_idx] = [[mask_list[cfc_info_start_idx]]]
-            mask_list[cfc_info_end_idx] = [[mask_list[cfc_info_end_idx]]]
-            mask_cfc_list[cfc_info_start_idx] = [[mask_cfc_list[cfc_info_start_idx]]]
-            mask_cfc_list[cfc_info_end_idx] = [[mask_cfc_list[cfc_info_end_idx]]]
-            code_completion_lbl_tensor_final[cfc_info_start_idx] = [[code_completion_lbl_tensor_final[cfc_info_start_idx]]]
-            code_completion_lbl_tensor_final[cfc_info_end_idx] = [[code_completion_lbl_tensor_final[cfc_info_end_idx]]]
-            cfc_lbl_tensor_final[cfc_info_start_idx] = [[cfc_lbl_tensor_final[cfc_info_start_idx]]]
-            cfc_lbl_tensor_final[cfc_info_end_idx] = [[cfc_lbl_tensor_final[cfc_info_end_idx]]]
-        print(labels_list)
-        print('=======================')
-        print(mask_list)
-        # print(mask_cfc_list)
-        print('=======================')
-        print(code_completion_lbl_tensor_final)
-        # print(cfc_lbl_tensor_final)
-        print('=======================')
-        print()
-        print('<fim_middle> at {}'.format(labels_list.index(2)))
-        print('<cfc_info> at {}'.format(cfc_info_start_idx))
-        print('</cfc_info> at {}'.format(cfc_info_end_idx))
-        print('\n\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n', flush=True)
-        # exit()
-        '''
         
         attention_mask = torch.ones_like(inp_tensor)
         attention_mask = attention_mask.masked_fill(inp_tensor.eq(pad_token_id), 0.0).type(torch.bool)
@@ -573,27 +497,6 @@ def get_inputs_and_labels_separate_cfc_label_cfcinrc(token_ids, pad_token_id=Non
         attention_mask = attention_mask.masked_fill(inp_tensor.eq(pad_token_id), 0.0).type(torch.bool)
         
     return inp_tensor, cfc_lbl_tensor, code_completion_lbl_tensor, attention_mask
-
-
-def get_loss_func(args, pad_token_id):
-    """ get the contrastive learning loss function """
-    logger.info(f"Getting {args.loss} objective")
-
-    assert args.loss in ["MLE_Only", "ContraCLM", "ContraCLMTok", "ContraCLMSeq", "Repoformer"], \
-        f"Loss: `{args.loss}` is not supported!"
-
-    # get the token-level contrastive loss
-    if args.loss == 'ContraCLMTok' or args.loss == 'ContraCLM':
-        loss_func_tok = ContraCLMTokLoss(pad_token_id, args.temperature)
-    else:
-        loss_func_tok = None
-    
-    if args.loss == 'ContraCLMSeq' or args.loss == 'ContraCLM':
-        loss_func_seq = ContraCLMSeqLoss(pad_token_id, args.temperature)
-    else:
-        loss_func_seq = None
-
-    return loss_func_tok, loss_func_seq
 
 
 class LitProgressBar(TQDMProgressBar):

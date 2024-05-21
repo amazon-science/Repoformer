@@ -12,10 +12,10 @@ from utils import (get_inputs_and_labels,
                    load_model_and_tokenizer)
 
 
-class LitContraCLM(pl.LightningModule):
+class RepoformerLM(pl.LightningModule):
     def __init__(self, trainer_args, loss_func_tok=None, loss_func_seq=None, 
                  loss_func_tok_word=None, num_nodes=1):
-        super(LitContraCLM, self).__init__()
+        super(RepoformerLM, self).__init__()
         self.save_hyperparameters(trainer_args)
         # Load Model and Tokenizer
         self.model, self.tokenizer = load_model_and_tokenizer(
