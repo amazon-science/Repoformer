@@ -121,6 +121,9 @@ After training, the deepspeed checkpoint will be stored in the `last.ckpt` folde
 - `python finetuning/evaluation/process_checkpoint_state_dict.py /path/to/last.ckpt/`
 
 ## Evaluation
+#### Datasets
+We release the newly created CrossCodeLongEval benchmark under the folder `crosscodelongeval`. You may run the `process_data.sh` to preprocess the data. In addition, we release the code to download and use Repoeval/CrossCodeEval in the folders `repo_eval` and `cceval`.
+
 #### Baselines
 To get the results of the baselines with or without repository-level retrieval, we recommend using the `run_fim_hf.sh` in the `repo_eval` and `cceval` folder. Sample command:
 ```
@@ -134,7 +137,7 @@ bash run_fim_hf.sh model exp retriever
     - `rcfcl_rg1`: left context + right context + retrieved cross-file context.    
 - `retriever`: 
     - For RepoEval, we support `sparse` (Jaccard similarity) and `unixcoder`.
-    - For CCEval, we support `bm25`, `openai_cosine_sim`, and `unixcoder_cosine_sim`.
+    - For CCEval and CrossCodeLongEval, we support `bm25`, `openai_cosine_sim`, and `unixcoder_cosine_sim`.
 
 We also support vllm for inference. For vllm, you would need torch 2.x. The other requirements are the same as in `requirements.txt`. 
 
