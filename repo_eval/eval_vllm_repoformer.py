@@ -111,7 +111,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         default="codelm",
-        choices=["codelm", "codelm_cfc", "codelm_leftright_context", 'codelm_right_cfc_left', 'codelm_cfc_right_left'],
+        choices=["codelm", "codelm_cfc", "codelm_leftright_context", 'codelm_right_cfc_left'],
         help="Model type to be loaded"
     )
     parser.add_argument("--prompt_file", type=str, default=None, help="file with a list of prompts")
