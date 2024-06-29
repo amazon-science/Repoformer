@@ -11,6 +11,9 @@ data_root=`realpath ./processed_data`
 mkdir -p ${HOME_DIR}/results/cceval
 output_root=${HOME_DIR}/results/cceval
 
+
+# You may use other non-fim models. To do so, simply provide the model name and remove the "--use_fim_prompt" flag.
+# Also, specify the batch size and dtype.
 declare -A py_model_zoo
 py_model_zoo["starcoder"]="bigcode/starcoder"
 py_model_zoo["starcoderbase"]="bigcode/starcoderbase"
@@ -25,34 +28,22 @@ batch_size["starcoderbase-7b"]=4
 batch_size["starcoderbase-3b"]=8 
 batch_size["starcoderbase-1b"]=8 
 
-# don't forget to activate proj_cc conda environment
-
 # helpful command if we terminate jobs
 # nvidia-smi | grep 'python' | awk '{ print $5 }' | xargs -n1 sudo kill -9
 # ps -fA | grep python3 | awk '{ print $2 }' | xargs -n1 sudo kill -9
 
 model_name=${py_model_zoo["$model"]}
 model_type=codelm
-if [[ $exp == "rg1" || $exp == "oracle" || $exp == "repocoder" ]]; then
+if [[ $exp == "rg1" || $exp == "oracle" ]]; then
     model_type=codelm_cfc
 elif [[ $exp == "lrcontext" ]]; then
     model_type=codelm_leftright_context
-elif [[ $exp == "rcfcl_rg1" || $exp == "rcfcl_rg1_lrquery" || $exp == "rcfcl_repocoder" || $exp == "rcfcl_oracle" ]]; then
+elif [[ $exp == "rcfcl_rg1" || $exp == "rcfcl_oracle" ]]; then
     model_type=codelm_right_cfc_left
-elif [[ $exp == "cfcrl_rg1" || $exp == "cfcrl_repocoder" || $exp == "cfcrl_oracle" ]]; then
-    model_type=codelm_cfc_right_left
 fi
 
 max_seq_length=2048
-dtype=fp16
-if [[ $model == "starcoder" ||  $model == "starcoderbase" || $model == "starcoderbase-1b" || $model == "starcoderbase-3b" || $model == "starcoderbase-7b" ]]; then
-    # max_seq_length=8192
-    dtype=bf16
-elif [[ $model == "santacoder" ]]; then
-    dtype=fp32
-elif [[ $model == "santacoder_no_fim" ]]; then
-    dtype=fp32
-fi
+dtype=bf16
 
 function run() {
     task=$1
@@ -85,8 +76,6 @@ function run() {
         task="api_completion"
     fi
 
-    # nvidia-smi | grep 'python' | awk '{ print $5 }' | xargs -n1 sudo kill -9
-    # ps -fA | grep 'python3' | awk '{ print $2 }' | xargs -n1 sudo kill -9
     accelerate launch --main_process_port 29570 ${HOME_DIR}/repo_eval/eval_hf.py \
         --task $task \
         --compute_cceval_metric \
