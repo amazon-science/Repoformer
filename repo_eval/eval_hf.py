@@ -104,28 +104,6 @@ def build_datasets(args, tokenizer):
         features["index"] = examples["index"]
         return features
     
-    def prepare_features_fim_codegen25(examples):
-        # first do proper truncation 
-        tokenizer.truncation_side = "left"
-        tokenized_inputs = tokenizer(
-            examples["prompt"],
-            padding=False,
-            max_length=args.max_seq_length - args.gen_length - 10,
-            truncation=True,
-        )
-        # inject fim tokens and redo tokenization
-        input_text = [x + "<mask_1>" + "<|endoftext|>" + "<sep>" + "<mask_1>" for x in tokenizer.batch_decode(tokenized_inputs['input_ids'])]
-        tokenized_inputs = tokenizer(
-            input_text,
-            padding="max_length",
-            max_length=args.max_seq_length - args.gen_length,
-            truncation=True,
-        )
-
-        features = {k: t for k, t in tokenized_inputs.items()}
-        features["index"] = examples["index"]
-        return features
-    
     def prepare_features_cfc_fim(examples):
         in_file_seq_length = args.max_seq_length - args.right_context_length - args.gen_length
 
@@ -151,38 +129,6 @@ def build_datasets(args, tokenizer):
             padding="max_length",
             max_length=args.max_seq_length - args.gen_length,
             truncation=False
-        )
-
-        features = {k: t for k, t in tokenized_inputs.items()}
-        features["index"] = examples["index"]
-        return features
-    
-    def prepare_features_cfc_fim_codegen25(examples):
-        in_file_seq_length = args.max_seq_length - args.right_context_length - args.gen_length
-
-        tokenizer.truncation_side = "right"
-        cfc_features = tokenizer(
-            examples["crossfile_context"] if type(examples["crossfile_context"][0]) == str else [x['text'] for x in examples["crossfile_context"]],
-            padding=False,
-            truncation=True,
-            max_length=args.cfc_seq_length - 5
-        )
-        tokenizer.truncation_side = "left"
-        infile_seq_features = tokenizer(
-            examples["prompt"],
-            truncation=True,
-            max_length=in_file_seq_length - 5
-        )
-        
-        input_text = [y + "<mask_1>" + x + "<|endoftext|>" + "<sep>" + "<mask_1>" for x, y in zip(tokenizer.batch_decode(cfc_features['input_ids']), 
-                                                                                                  tokenizer.batch_decode(infile_seq_features['input_ids']))]
-        tokenizer.padding_side = "left"
-        tokenizer.truncation_side = "left"
-        tokenized_inputs = tokenizer(
-            input_text,
-            padding="max_length",
-            max_length=args.max_seq_length - args.gen_length,
-            truncation=True
         )
 
         features = {k: t for k, t in tokenized_inputs.items()}
@@ -250,38 +196,6 @@ def build_datasets(args, tokenizer):
         features["index"] = examples["index"]
         return features
     
-    def prepare_features_leftright_context_fim_codegen25(examples):
-        in_file_seq_length = args.max_seq_length - args.right_context_length - args.gen_length
-
-        tokenizer.truncation_side = "right"
-        right_context_features = tokenizer(
-            examples["right_context"],
-            padding=False,
-            truncation=True,
-            max_length=args.right_context_length - 10
-        )
-        tokenizer.truncation_side = "left"
-        infile_seq_features = tokenizer(
-            examples["prompt"],
-            truncation=True,
-            max_length=in_file_seq_length - 10
-        )
-
-        input_text = [y + "<mask_1>" + x + "<|endoftext|>" + "<sep>" + "<mask_1>"  for x, y in zip(tokenizer.batch_decode(right_context_features['input_ids']),
-                                                                                               tokenizer.batch_decode(infile_seq_features['input_ids']))]
-        tokenizer.padding_side = "left"
-        tokenizer.truncation_side = "left"
-        tokenized_inputs = tokenizer(
-            input_text,
-            padding="max_length",
-            max_length=args.max_seq_length - args.gen_length - 5,
-            truncation=True
-        )
-
-        features = {k: t for k, t in tokenized_inputs.items()}
-        features["index"] = examples["index"]
-        return features
-
     def prepare_features_leftright_context(examples):
         in_file_seq_length = args.max_seq_length - args.right_context_length - args.gen_length
 
@@ -304,76 +218,6 @@ def build_datasets(args, tokenizer):
             features[k] = []
             for idx, e in enumerate(v):
                 iids = right_context_features[k][idx] + e
-                features[k].append(iids)
-
-        # pad to max_seq_length
-        tokenizer.padding_side = "left"
-        features = tokenizer.pad(features, padding="max_length", max_length=args.max_seq_length - args.gen_length)
-        features["index"] = examples["index"]
-        return features
-    
-    def prepare_features_cfc_right_left(examples):
-        in_file_seq_length = args.max_seq_length - args.cfc_seq_length - args.right_context_length - args.gen_length
-
-        tokenizer.truncation_side = "right"
-        right_context_features = tokenizer(
-            examples["right_context"],
-            truncation=True,
-            max_length=args.right_context_length
-        )
-        crossfile_seq_features = tokenizer(
-            examples["crossfile_context"] if type(examples["crossfile_context"][0]) == str else [x['text'] for x in examples["crossfile_context"]],
-            truncation=True,
-            max_length=args.cfc_seq_length
-        )
-        tokenizer.truncation_side = "left"
-        infile_seq_features = tokenizer(
-            examples["prompt"],
-            truncation=True,
-            max_length=in_file_seq_length
-        )
-
-        # concatenate project-level context and file-level context
-        features = {}
-        for k, v in infile_seq_features.items():
-            features[k] = []
-            for idx, e in enumerate(v):
-                iids = crossfile_seq_features[k][idx] + right_context_features[k][idx] + e
-                features[k].append(iids)
-
-        # pad to max_seq_length
-        tokenizer.padding_side = "left"
-        features = tokenizer.pad(features, padding="max_length", max_length=args.max_seq_length - args.gen_length)
-        features["index"] = examples["index"]
-        return features
-    
-    def prepare_features_cfc_right_left(examples):
-        in_file_seq_length = args.max_seq_length - args.cfc_seq_length - args.right_context_length - args.gen_length
-
-        tokenizer.truncation_side = "right"
-        right_context_features = tokenizer(
-            examples["right_context"],
-            truncation=True,
-            max_length=args.right_context_length
-        )
-        crossfile_seq_features = tokenizer(
-            examples["crossfile_context"] if type(examples["crossfile_context"][0]) == str else [x['text'] for x in examples["crossfile_context"]],
-            truncation=True,
-            max_length=args.cfc_seq_length
-        )
-        tokenizer.truncation_side = "left"
-        infile_seq_features = tokenizer(
-            examples["prompt"],
-            truncation=True,
-            max_length=in_file_seq_length
-        )
-
-        # concatenate project-level context and file-level context
-        features = {}
-        for k, v in infile_seq_features.items():
-            features[k] = []
-            for idx, e in enumerate(v):
-                iids = crossfile_seq_features[k][idx] + right_context_features[k][idx] + e
                 features[k].append(iids)
 
         # pad to max_seq_length
@@ -454,53 +298,11 @@ def build_datasets(args, tokenizer):
         features["index"] = examples["index"]
         return features
     
-    def prepare_features_right_cfc_left_fim_codegen25(examples):
-        in_file_seq_length = args.max_seq_length - args.cfc_seq_length - args.right_context_length - args.gen_length
-
-        tokenizer.truncation_side = "right"
-        cfc_features = tokenizer(
-            examples["crossfile_context"] if type(examples["crossfile_context"][0]) == str else [x['text'] for x in examples["crossfile_context"]],
-            padding=False,
-            truncation=True,
-            max_length=args.cfc_seq_length - 5
-        )
-        right_context_features = tokenizer(
-            examples["right_context"],
-            padding=False,
-            truncation=True,
-            max_length=args.right_context_length - 5
-        )
-        tokenizer.truncation_side = "left"
-        infile_seq_features = tokenizer(
-            examples["prompt"],
-            truncation=True,
-            max_length=in_file_seq_length - 5
-        )
-
-        input_text = [x + z + "<mask_1>" + y + "<|endoftext|>" + "<sep>" + "<mask_1>" for x, y, z in zip(tokenizer.batch_decode(cfc_features['input_ids']),
-                                                                                                         tokenizer.batch_decode(right_context_features['input_ids']),
-                                                                                                         tokenizer.batch_decode(infile_seq_features['input_ids']))]
-        tokenizer.padding_side = "left"
-        tokenizer.truncation_side = "left"
-        tokenized_inputs = tokenizer(
-            input_text,
-            padding="max_length",
-            max_length=args.max_seq_length - args.gen_length,
-            truncation=True
-        )
-
-        features = {k: t for k, t in tokenized_inputs.items()}
-        features["index"] = examples["index"]
-        return features
-
     if args.model_type == "codelm":
         if args.use_fim_prompt:
-            if 'starcoder' in args.model_name_or_path.lower():
-                prep_function = prepare_features_fim
-            elif 'codegen2' in args.model_name_or_path.lower():
-                prep_function = prepare_features_fim_codegen25
-            else:
-                raise NotImplementedError
+            if 'starcoder' not in args.model_name_or_path.lower():
+                print('Warning: unrecognized model name, starcoder prompt is used as default.')
+            prep_function = prepare_features_fim
             tokenized_datasets = raw_datasets.map(
                 prep_function,
                 batched=True,
@@ -520,12 +322,9 @@ def build_datasets(args, tokenizer):
             )
     elif args.model_type == "codelm_cfc":
         if args.use_fim_prompt:
-            if 'starcoder' in args.model_name_or_path.lower():
-                prep_function = prepare_features_cfc_fim
-            elif 'codegen2' in args.model_name_or_path.lower():
-                prep_function = prepare_features_cfc_fim_codegen25
-            else:
-                raise NotImplementedError
+            if 'starcoder' not in args.model_name_or_path.lower():
+                print('Warning: unrecognized model name, starcoder prompt is used as default.')
+            prep_function = prepare_features_cfc_fim
             tokenized_datasets = raw_datasets.map(
                 prep_function,
                 batched=True,
@@ -545,12 +344,9 @@ def build_datasets(args, tokenizer):
             )
     elif args.model_type == "codelm_leftright_context":
         if args.use_fim_prompt:
-            if 'starcoder' in args.model_name_or_path.lower():
-                prep_function = prepare_features_leftright_context_fim
-            elif 'codegen2' in args.model_name_or_path.lower():
-                prep_function = prepare_features_leftright_context_fim_codegen25
-            else:
-                raise NotImplementedError
+            if 'starcoder' not in args.model_name_or_path.lower():
+                print('Warning: unrecognized model name, starcoder prompt is used as default.')
+            prep_function = prepare_features_leftright_context_fim
             tokenized_datasets = raw_datasets.map(
                 prep_function,
                 batched=True,
@@ -570,14 +366,9 @@ def build_datasets(args, tokenizer):
             )
     elif args.model_type == "codelm_right_cfc_left":
         if args.use_fim_prompt:
-            if 'starcoder' in args.model_name_or_path.lower():
-                prep_function = prepare_features_right_cfc_left_fim
-            elif 'codegen2' in args.model_name_or_path.lower():
-                prep_function = prepare_features_right_cfc_left_fim_codegen25
-            else:
+            if 'starcoder' not in args.model_name_or_path.lower():
                 print('Warning: unrecognized model name, starcoder prompt is used as default.')
-                prep_function = prepare_features_right_cfc_left_fim
-                # raise NotImplementedError
+            prep_function = prepare_features_right_cfc_left_fim
             tokenized_datasets = raw_datasets.map(
                 prep_function,
                 batched=True,
@@ -595,17 +386,6 @@ def build_datasets(args, tokenizer):
                 load_from_cache_file=not args.overwrite_cache,
                 desc="Running tokenizer on dataset",
             )
-    elif args.model_type == "codelm_cfc_right_left":
-        if args.use_fim_prompt:
-            raise NotImplementedError
-        tokenized_datasets = raw_datasets.map(
-            prepare_features_cfc_right_left,
-            batched=True,
-            num_proc=args.preprocessing_num_workers,
-            remove_columns=column_names,
-            load_from_cache_file=not args.overwrite_cache,
-            desc="Running tokenizer on dataset",
-        )
     else:
         raise NotImplementedError("prepare feature functions not implemented for new model type")
 
@@ -644,25 +424,9 @@ def model_inference(tokenized_datasets, index2taskid, tokenizer):
     else:
         assert False, f'{args.dtype=} not implemented'
 
-    if args.model_type in ["codelm", "codelm_cfc", "codelm_leftright_context", "codelm_right_cfc_left", "codelm_cfc_right_left"]:
-        
-        if 'santacoder_no_fim' in args.model_name_or_path:
-            model = AutoModelForCausalLM.from_pretrained(
-            args.model_name_or_path.strip('no_fim'),
-            revision="no-fim",
-            torch_dtype=dtype,
-            trust_remote_code=True,
-            load_in_8bit=True if dtype == torch.int8 else False
-        )
-        else:
-            model = AutoModelForCausalLM.from_pretrained(
-            args.model_name_or_path,
-            torch_dtype=dtype,
-            trust_remote_code=True,
-            load_in_8bit=True if dtype == torch.int8 else False
-        )
-    else:
-        raise ValueError("Unknown model type")
+    model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, torch_dtype=dtype, 
+                                                 trust_remote_code=True, 
+                                                 load_in_8bit=True if dtype == torch.int8 else False)
     
     # set up speculative decoding
     if args.draft_model:
@@ -803,11 +567,9 @@ def model_inference(tokenized_datasets, index2taskid, tokenizer):
                 all_batch_entropy_all_tokens.extend([x.item() for x in entropy_all_tokens])
 
             batch_pred = batch_pred[:, -args.gen_length:]
+            generated_texts = tokenizer.batch_decode(batch_pred, skip_special_tokens=False)
             if 'starcoder2' in args.model_name_or_path:
-                generated_texts = tokenizer.batch_decode(batch_pred, skip_special_tokens=False)
                 generated_texts = [x.split('<file_sep>')[0] for x in generated_texts]
-            else:
-                generated_texts = tokenizer.batch_decode(batch_pred, skip_special_tokens=True)
             all_preds.extend(generated_texts)
             all_task_ids.extend(batch_task_id.tolist())
             all_batch_latency.extend(cur_batch_latency.tolist() if type(cur_batch_latency.tolist()) != float else [cur_batch_latency.tolist()])
@@ -843,7 +605,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         default="codelm",
-        choices=["codelm", "codelm_cfc", "codelm_leftright_context", 'codelm_right_cfc_left', 'codelm_cfc_right_left'],
+        choices=["codelm", "codelm_cfc", "codelm_leftright_context", 'codelm_right_cfc_left'],
         help="Model type to be loaded"
     )
     parser.add_argument("--use_fim_prompt", action='store_true', help="Use FIM prompting style (StarCoder, CodeGen-2, SantaCoder, etc.)")
@@ -909,7 +671,6 @@ if __name__ == "__main__":
         default="build/python-lang-parser.so",
         help="tree-sitter lib for tokenize code"
     )
-    # only compute metric
     parser.add_argument("--only_compute_metric", action="store_true", help="only compute metric")
     parser.add_argument(
         "--task",
