@@ -6,8 +6,6 @@ from transformers.optimization import get_linear_schedule_with_warmup, get_inver
 from transformers.trainer_pt_utils import get_parameter_names
 
 from utils import (get_inputs_and_labels,
-                   get_inputs_and_labels_cfcinrc,
-                   get_inputs_and_labels_separate_cfc_label, 
                    get_inputs_and_labels_separate_cfc_label_cfcinrc, 
                    load_model_and_tokenizer)
 
@@ -79,49 +77,16 @@ class RepoformerLM(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         token_ids = batch['input_ids']
         if self.loss == "Repoformer":
-            if self.trainer_args.separate_cfc_token_loss:
-                if self.trainer_args.cfc_in_rc:
-                    input_ids, labels_cfc, labels_completion, attention_mask = get_inputs_and_labels_separate_cfc_label_cfcinrc(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_end_rc_token=self.tokenizer.vocab['<end_rc>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                        has_neg_retrieval=self.trainer_args.has_neg_retrieval
-                    )
-                else:
-                    if self.trainer_args.has_neg_retrieval:
-                        raise NotImplementedError
-                    input_ids, labels_cfc, labels_completion, attention_mask = get_inputs_and_labels_separate_cfc_label(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_cfc_info_end_token=self.tokenizer.vocab['</cfc_info>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                        replace_cfc_end_with_fim_middle=self.trainer_args.replace_cfc_end_with_fim_middle
-                    )
-            else:
-                if self.trainer_args.cfc_in_rc:
-                    if self.trainer_args.has_neg_retrieval:
-                        raise NotImplementedError
-                    input_ids, labels, attention_mask = get_inputs_and_labels_cfcinrc(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_end_rc_token=self.tokenizer.vocab['<end_rc>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                    )
-                else:
-                    if self.trainer_args.has_neg_retrieval:
-                        raise NotImplementedError
-                    input_ids, labels, attention_mask = get_inputs_and_labels(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_cfc_info_end_token=self.tokenizer.vocab['</cfc_info>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                        replace_cfc_end_with_fim_middle=self.trainer_args.replace_cfc_end_with_fim_middle
-                    )
+            assert self.trainer_args.separate_cfc_token_loss
+            assert self.trainer_args.cfc_in_rc
+            input_ids, labels_cfc, labels_completion, attention_mask = get_inputs_and_labels_separate_cfc_label_cfcinrc(
+                token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
+                repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
+                repoformer_end_rc_token=self.tokenizer.vocab['<end_rc>'],
+                fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
+                full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
+                has_neg_retrieval=self.trainer_args.has_neg_retrieval
+            )
         else:
             input_ids, labels, attention_mask = get_inputs_and_labels(
                 token_ids, pad_token_id=self.pad_token_id, mask_pad=True
@@ -144,7 +109,6 @@ class RepoformerLM(pl.LightningModule):
                 loss_cfc = 0.0
             loss_code_completion = self.mle_loss(logits.view(-1, self.vocab_size), labels_completion.view(-1))
             loss = self.trainer_args.cfc_token_loss_lambda * loss_cfc + loss_code_completion
-            # TODO: also log cfc accuracy/f1
             self.log("Train/Loss/MLE_cfc", loss_cfc, sync_dist=True, on_step=True)
             self.log("Train/Loss/MLE_code", loss_code_completion, sync_dist=True, on_step=True)
             self.log("Train/Loss/MLE", loss, sync_dist=True, on_step=True, prog_bar=True)
@@ -255,62 +219,26 @@ class RepoformerLM(pl.LightningModule):
         if self.loss == "Repoformer":
             eval_items = []
 
-            if self.trainer_args.separate_cfc_token_loss:
-                eval_fct = torch.nn.CrossEntropyLoss()
-                token_ids = batch['token_ids']
-                if self.trainer_args.cfc_in_rc:
-                    input_ids, labels_cfc, labels_completion, attention_mask = get_inputs_and_labels_separate_cfc_label_cfcinrc(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_end_rc_token=self.tokenizer.vocab['<end_rc>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                        has_neg_retrieval=self.trainer_args.has_neg_retrieval
-                    )
-                else:
-                    if self.trainer_args.has_neg_retrieval:
-                        raise NotImplementedError
-                    input_ids, labels_cfc, labels_completion, attention_mask = get_inputs_and_labels_separate_cfc_label(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_cfc_info_end_token=self.tokenizer.vocab['</cfc_info>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                        replace_cfc_end_with_fim_middle=self.trainer_args.replace_cfc_end_with_fim_middle
-                    )
-                logits, _ = self(input_ids, attention_mask=attention_mask)
-                loss_cfc = eval_fct(logits.view(-1, self.model.config.vocab_size), labels_cfc.view(-1))
-                loss_code_completion = eval_fct(logits.view(-1, self.model.config.vocab_size), labels_completion.view(-1))
-                loss = self.trainer_args.cfc_token_loss_lambda * loss_cfc + loss_code_completion
-                eval_items += [loss_cfc, loss_code_completion, loss]
-            else:
-                eval_fct = torch.nn.CrossEntropyLoss()
-                token_ids = batch['token_ids']
-                if self.trainer_args.cfc_in_rc:
-                    if self.trainer_args.has_neg_retrieval:
-                        raise NotImplementedError
-                    input_ids, labels, attention_mask = get_inputs_and_labels_cfcinrc(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_end_rc_token=self.tokenizer.vocab['<end_rc>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                    )
-                else:
-                    if self.trainer_args.has_neg_retrieval:
-                        raise NotImplementedError
-                    input_ids, labels, attention_mask = get_inputs_and_labels(
-                        token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
-                        repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
-                        repoformer_cfc_info_end_token=self.tokenizer.vocab['</cfc_info>'],
-                        fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
-                        full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
-                        replace_cfc_end_with_fim_middle=self.trainer_args.replace_cfc_end_with_fim_middle
-                    )
-                logits, _ = self(input_ids, attention_mask=attention_mask)
-                loss = eval_fct(logits.view(-1, self.model.config.vocab_size), labels.view(-1))
-                eval_items.append(loss)
-
+            assert self.trainer_args.separate_cfc_token_loss
+            assert self.trainer_args.cfc_in_rc
+            eval_fct = torch.nn.CrossEntropyLoss()
+            token_ids = batch['token_ids']
+            
+            input_ids, labels_cfc, labels_completion, attention_mask = get_inputs_and_labels_separate_cfc_label_cfcinrc(
+                token_ids, pad_token_id=self.pad_token_id, mask_pad=True, 
+                repoformer_cfc_info_start_token=self.tokenizer.vocab['<cfc_info>'], 
+                repoformer_end_rc_token=self.tokenizer.vocab['<end_rc>'],
+                fim_middle_id=self.tokenizer.vocab['<fim_middle>'],
+                full_sequence_code_completion_loss=self.trainer_args.full_sequence_code_completion_loss,
+                has_neg_retrieval=self.trainer_args.has_neg_retrieval
+            )
+            logits, _ = self(input_ids, attention_mask=attention_mask)
+            loss_cfc = eval_fct(logits.view(-1, self.model.config.vocab_size), labels_cfc.view(-1))
+            loss_code_completion = eval_fct(logits.view(-1, self.model.config.vocab_size), labels_completion.view(-1))
+            loss = self.trainer_args.cfc_token_loss_lambda * loss_cfc + loss_code_completion
+            eval_items += [loss_cfc, loss_code_completion, loss]
+            
+            
             # evaluate cfc predictions
             if self.trainer_args.separate_cfc_token_loss:
                 labels = labels_cfc
