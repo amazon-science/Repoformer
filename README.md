@@ -65,7 +65,7 @@ cd finetuning/data_creation/
 python 1_create_chunk.py --lang [python/java/csharp/javascript] --input_json raw.jsonl --poisson_lambda 3.0 --num_processes 20 --cluster_ratio 0.1 --shard_size 500 [--oracle_in_query]
 
 # for creating function completion data
-python 1_create_function.py --lang [python/java/csharp/javascript] --input_json raw.jsonl --poisson_lambda 3.0 --num_processes 20 --cluster_ratio 0.1 --shard_size 500 [--oracle_in_query]
+python 1_create_function.py --lang [python/java/csharp/javascript] --input_json raw.jsonl --num_processes 20 --cluster_ratio 0.1 --shard_size 500 [--oracle_in_query]
 ```
 Note that the `--oracle_in_query` flag uses the target line for retrieving the relevant contexts. In the paper, half of the data is created with `--oracle_in_query` and half is created without it. We output data in shards to make downstream processing easier. The `--shard_size` parameter controls the size of each shard.
 
