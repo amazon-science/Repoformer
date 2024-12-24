@@ -55,6 +55,23 @@ We start from preprocessed repositories from the stack. To reproduce our data cr
 }
 ```
 
+To run the data creation algorithm for function completion, the starting position of each function needs to be included in the data as well. 
+```
+{
+    "repo_name": "...",
+    ...,
+    "metadata": {
+        "functions": {
+            [
+                [(func_1_start_line, func_1_start_char), (func_1_end_line, func_1_end_char)],
+                [(func_2_start_line, func_2_start_char), (func_2_end_line, func_2_end_char)],
+                ...
+            ]
+        }
+    }
+}
+```
+
 Starting from the raw file `raw.jsonl`, the data sampling algorithm contains three steps: blank sampling, RAG simulation, and data merging. 
 
 #### Step 1: blank sampling
