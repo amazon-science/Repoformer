@@ -85,9 +85,9 @@ def model_inference(args):
             retrieval_prob = torch.softmax(torch.tensor(logits), dim=-1)[49152].item()
             do_retrieval = retrieval_prob > args.retrieval_threshold
             if do_retrieval:
-                cur_pred = llm.generate(entry['llm_prompt_lrcontext'], sampling_params, use_tqdm=False)
-            else:
                 cur_pred = llm.generate(entry['llm_prompt_right_cfc_left'], sampling_params, use_tqdm=False)
+            else:
+                cur_pred = llm.generate(entry['llm_prompt_lrcontext'], sampling_params, use_tqdm=False)
             all_preds.append({
                 "task_id": entry["metadata"]["task_id"],
                 "pred": cur_pred[0].outputs[0].text,
